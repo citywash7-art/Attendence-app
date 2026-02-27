@@ -6,23 +6,36 @@ const connectDB = require('./db');
 const { PORT, CORS_ORIGIN, SERVE_WEB } = require('./config');
 
 const app = express();
+app.set('trust proxy', 1);
 
 const allowedOrigins = (CORS_ORIGIN || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const corsOptions = {
-  origin: (origin, cb) => {
-    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-      return cb(null, true);
+const corsOptions = (req, cb) => {
+  const origin = req.header('Origin');
+  if (!origin) {
+    return cb(null, { origin: false });
+  }
+
+  if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+    return cb(null, { origin: true, credentials: true });
+  }
+
+  if (SERVE_WEB) {
+    const proto = req.get('x-forwarded-proto') || req.protocol;
+    const host = req.get('host');
+    const requestOrigin = `${proto}://${host}`;
+    if (origin === requestOrigin) {
+      return cb(null, { origin: true, credentials: true });
     }
-    return cb(new Error('CORS not allowed'));
-  },
-  credentials: true
+  }
+
+  return cb(null, { origin: false });
 };
 
-app.use(cors(corsOptions));
+app.use('/api', cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
