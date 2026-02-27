@@ -1,0 +1,11 @@
+{
+  "name": "attendance-system",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:web": "npm --prefix web run dev",
+    "seed": "npm --prefix server run seed",
+    "dev": "npm --prefix server run dev"
+  }
+}

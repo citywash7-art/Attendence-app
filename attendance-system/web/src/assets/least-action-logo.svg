@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="80" viewBox="0 0 260 80">
+  <rect width="260" height="80" fill="white"/>
+  <g transform="translate(10,10)" fill="none" stroke="#2F55A4" stroke-width="6" stroke-linejoin="round">
+    <path d="M10 50 L30 10 L50 50 Z"/>
+    <path d="M30 10 L70 50"/>
+    <path d="M20 35 L50 35"/>
+  </g>
+  <g font-family="Arial, sans-serif" fill="#2F55A4">
+    <text x="90" y="34" font-size="18" font-weight="700">Least Action</text>
+    <text x="90" y="54" font-size="18" font-weight="700">Company</text>
+    <text x="92" y="70" font-size="10" font-weight="600" letter-spacing="1">Sense Solve Scale</text>
+  </g>
+</svg>

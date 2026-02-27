@@ -1,0 +1,308 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Workforce Attendance</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --b:#e6e6e6; --t:#111; --m:#666; --bg:#fff; --card:#fff; }
+    body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--t);max-width:980px;margin:24px auto;padding:0 16px;}
+    h2{margin:0 0 8px;}
+    .muted{color:var(--m);font-size:13px;line-height:1.35;}
+    .row{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;}
+    .card{border:1px solid var(--b);border-radius:14px;padding:16px;flex:1;min-width:300px;background:var(--card);}
+    input,button{padding:10px 12px;font-size:14px;border-radius:10px;border:1px solid var(--b);}
+    button{cursor:pointer;background:#111;color:#fff;border:none}
+    button.secondary{background:#f3f3f3;color:#111;border:1px solid var(--b);}
+    .pill{display:inline-block;padding:5px 10px;border-radius:999px;background:#f5f5f5;font-size:12px}
+    video,img{width:100%;border-radius:12px;border:1px solid var(--b);margin-top:10px}
+    hr{border:none;border-top:1px solid var(--b);margin:14px 0}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:720px){ .grid{grid-template-columns:1fr} }
+    pre{white-space:pre-wrap;word-break:break-word;background:#fafafa;border:1px solid var(--b);padding:10px;border-radius:12px}
+  </style>
+</head>
+<body>
+  <h2>Workforce Attendance</h2>
+  <p class="muted">
+    Camera works on <b>HTTPS</b> (or <b>localhost</b>). If camera is blocked, use the upload fallback.
+    Location needs permission.
+  </p>
+
+  <div class="row">
+    <div class="card">
+      <h3>Login</h3>
+      <div class="grid">
+        <input id="email" placeholder="Email" value="admin@test.com">
+        <input id="password" placeholder="Password" type="password" value="Admin@123">
+      </div>
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button onclick="login()">Login</button>
+        <button class="secondary" onclick="seed()">Seed (demo)</button>
+      </div>
+      <p id="loginStatus" class="muted"></p>
+      <p class="muted">Logged in as: <span id="me">-</span></p>
+    </div>
+
+    <div class="card">
+      <h3>Current Location</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button onclick="getLocation()">Get Location</button>
+        <span class="pill">Lat: <span id="lat">-</span></span>
+        <span class="pill">Lng: <span id="lng">-</span></span>
+        <span class="pill">Acc: <span id="acc">-</span> m</span>
+      </div>
+      <p id="locStatus" class="muted"></p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h3>Photo Proof</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button onclick="startCamera()">Start Camera</button>
+        <button class="secondary" onclick="capturePhoto()">Capture</button>
+      </div>
+      <p id="camMsg" class="muted"></p>
+      <video id="video" autoplay playsinline></video>
+      <img id="preview" style="display:none;" alt="Captured preview">
+      <hr>
+      <p class="muted">Fallback upload (if camera not working):</p>
+      <input type="file" id="photoFile" accept="image/*" capture="user">
+    </div>
+
+    <div class="card">
+      <h3>Worker Punch</h3>
+      <p class="muted">Status: <span id="punchStatus" class="pill">Not punched</span></p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button onclick="punch('IN')">Check-In</button>
+        <button onclick="punch('OUT')">Check-Out</button>
+        <button class="secondary" onclick="loadMyAttendance()">My History</button>
+      </div>
+      <p id="result" class="muted"></p>
+      <pre id="history"></pre>
+    </div>
+  </div>
+
+  <div class="row" id="adminSection" style="display:none;">
+    <div class="card">
+      <h3>Admin Office Location</h3>
+      <p class="muted">Set office location + radius (default 100m). Worker must be inside to get Approved.</p>
+
+      <div class="grid">
+        <input id="officeName" placeholder="Office name" value="Main Office">
+        <input id="radius" placeholder="Radius meters" value="100">
+        <input id="officeLat" placeholder="Office Latitude">
+        <input id="officeLng" placeholder="Office Longitude">
+      </div>
+
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="secondary" onclick="useMyLocationForOffice()">Use my current location</button>
+        <button onclick="saveOffice()">Save Office</button>
+        <button class="secondary" onclick="loadOffice()">Load Office</button>
+      </div>
+
+      <p id="officeMsg" class="muted"></p>
+      <pre id="officeView"></pre>
+    </div>
+  </div>
+
+<script>
+let token = "";
+let me = null;
+let currentLat = null, currentLng = null, accuracy = null;
+let stream = null;
+let capturedBlob = null;
+
+function setText(id, txt){ document.getElementById(id).textContent = txt; }
+
+async function seed(){
+  await fetch("/seed");
+  alert("Seeded. Login with admin@test.com / Admin@123");
+}
+
+async function login(){
+  setText("loginStatus", "Logging in...");
+  const res = await fetch("/auth/login",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      email: document.getElementById("email").value,
+      password: document.getElementById("password").value
+    })
+  });
+  const data = await res.json();
+  if(!res.ok){
+    setText("loginStatus", "❌ " + (data.message || "Login failed"));
+    return;
+  }
+  token = data.token;
+  me = data.user;
+  setText("loginStatus","✅ Logged in.");
+  setText("me", `${me.email} (${me.role})`);
+
+  if(me.role === "admin"){
+    document.getElementById("adminSection").style.display = "flex";
+    await loadOffice();
+  }else{
+    document.getElementById("adminSection").style.display = "none";
+  }
+}
+
+function getLocation(){
+  if(!navigator.geolocation){
+    setText("locStatus","❌ Geolocation not supported");
+    return;
+  }
+  setText("locStatus","Getting location...");
+  navigator.geolocation.getCurrentPosition(pos=>{
+    currentLat = pos.coords.latitude;
+    currentLng = pos.coords.longitude;
+    accuracy = pos.coords.accuracy;
+    setText("locStatus","✅ Location captured");
+    setText("lat", currentLat.toFixed(6));
+    setText("lng", currentLng.toFixed(6));
+    setText("acc", Math.round(accuracy));
+  }, err=>{
+    setText("locStatus","❌ " + err.message);
+  }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
+}
+
+async function startCamera(){
+  const msg = document.getElementById("camMsg");
+  msg.textContent = "";
+  capturedBlob = null;
+  document.getElementById("preview").style.display = "none";
+
+  try{
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      msg.textContent = "Camera not supported. Use upload fallback below.";
+      return;
+    }
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }, audio:false });
+    document.getElementById("video").srcObject = stream;
+    msg.textContent = "✅ Camera started. Click Capture.";
+  }catch(e){
+    msg.textContent = "❌ Camera failed: " + e.message + ". Use upload fallback below.";
+  }
+}
+
+function capturePhoto(){
+  const video = document.getElementById("video");
+  if(!video || !video.videoWidth){
+    document.getElementById("camMsg").textContent = "Start camera first (or use upload).";
+    return;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video,0,0);
+
+  canvas.toBlob(blob=>{
+    capturedBlob = blob;
+    const img = document.getElementById("preview");
+    img.src = URL.createObjectURL(blob);
+    img.style.display = "block";
+    document.getElementById("camMsg").textContent = "✅ Captured. You can punch now.";
+  }, "image/jpeg", 0.9);
+}
+
+function getPhotoFile(){
+  if(capturedBlob) return new File([capturedBlob], "capture.jpg", { type:"image/jpeg" });
+  const f = document.getElementById("photoFile").files;
+  return f && f[0] ? f[0] : null;
+}
+
+async function punch(type){
+  if(!token){ alert("Login first"); return; }
+  if(currentLat == null || currentLng == null){ alert("Get location first"); return; }
+  const photo = getPhotoFile();
+  if(!photo){ alert("Capture photo OR upload file"); return; }
+
+  const fd = new FormData();
+  fd.append("type", type);
+  fd.append("lat", currentLat);
+  fd.append("lng", currentLng);
+  fd.append("accuracyMeters", accuracy ?? "");
+  fd.append("photo", photo);
+
+  const res = await fetch("/attendance/punch",{
+    method:"POST",
+    headers:{ Authorization:"Bearer "+token },
+    body: fd
+  });
+  const data = await res.json();
+  if(!res.ok){
+    setText("result", "❌ " + (data.message || "Punch failed"));
+    return;
+  }
+  const a = data.attendance;
+  const dist = Math.round(a.distanceMeters || 0);
+  setText("punchStatus", `${a.status.toUpperCase()} (${dist}m)`);
+  setText("result", `✅ ${a.type} saved | ${a.status} | distance ${dist}m | ${a.reason || ""}`);
+}
+
+async function loadMyAttendance(){
+  if(!token){ alert("Login first"); return; }
+  const res = await fetch("/attendance/me",{ headers:{ Authorization:"Bearer "+token } });
+  const data = await res.json();
+  document.getElementById("history").textContent = JSON.stringify(data.items?.slice(0,20) || data, null, 2);
+}
+
+// Admin office UI
+async function loadOffice(){
+  if(!token || !me || me.role!=="admin") return;
+  setText("officeMsg","Loading office...");
+  const res = await fetch("/admin/office", { headers:{ Authorization:"Bearer "+token } });
+  const data = await res.json();
+  if(!res.ok){
+    setText("officeMsg","❌ " + (data.message || "Failed"));
+    return;
+  }
+  setText("officeMsg","✅ Loaded");
+  document.getElementById("officeView").textContent = JSON.stringify(data.office, null, 2);
+
+  if(data.office){
+    document.getElementById("officeName").value = data.office.name || "Main Office";
+    document.getElementById("radius").value = data.office.radiusMeters ?? 100;
+    document.getElementById("officeLat").value = data.office.lat ?? "";
+    document.getElementById("officeLng").value = data.office.lng ?? "";
+  }
+}
+
+async function useMyLocationForOffice(){
+  if(currentLat == null || currentLng == null){
+    alert("First click Get Location");
+    return;
+  }
+  document.getElementById("officeLat").value = currentLat;
+  document.getElementById("officeLng").value = currentLng;
+  setText("officeMsg","Filled office lat/lng from your current location.");
+}
+
+async function saveOffice(){
+  if(!token || !me || me.role!=="admin") return;
+  setText("officeMsg","Saving...");
+  const payload = {
+    name: document.getElementById("officeName").value || "Main Office",
+    lat: Number(document.getElementById("officeLat").value),
+    lng: Number(document.getElementById("officeLng").value),
+    radiusMeters: Number(document.getElementById("radius").value || 100)
+  };
+  const res = await fetch("/admin/office",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json", Authorization:"Bearer "+token },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if(!res.ok){
+    setText("officeMsg","❌ " + (data.message || "Save failed"));
+    return;
+  }
+  setText("officeMsg","✅ Saved");
+  document.getElementById("officeView").textContent = JSON.stringify(data.office, null, 2);
+}
+</script>
+</body>
+</html>

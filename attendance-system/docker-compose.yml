@@ -1,0 +1,13 @@
+﻿version: "3.9"
+services:
+  app:
+    build: .
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./server/.env
+    environment:
+      NODE_ENV: production
+      SERVE_WEB: "true"
+    volumes:
+      - ./server/src/uploads:/app/server/src/uploads
