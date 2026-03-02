@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "dev": "node -r ./dns-fix.cjs src/index.js",
-    "seed": "node -r ./dns-fix.cjs src/utils/seed.js"
+    "dev": "npm --prefix attendance-system run dev",
+    "seed": "npm --prefix attendance-system run seed"
   }
 ,
   "dependencies": {

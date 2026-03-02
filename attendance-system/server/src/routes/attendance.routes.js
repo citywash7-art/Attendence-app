@@ -60,16 +60,13 @@ router.post(
       throw createError(400, 'Invalid punch type');
     }
 
-    if (!req.file) {
-      throw createError(400, 'Photo is required');
+    const workMode = String(req.body.workMode || 'OFFICE').toUpperCase().trim();
+    if (!['OFFICE', 'WFH'].includes(workMode)) {
+      throw createError(400, 'Invalid work mode');
     }
 
-    const lat = parseNumber(req.body.lat);
-    const lng = parseNumber(req.body.lng);
-    const accuracyMeters = parseNumber(req.body.accuracyMeters);
-
-    if (lat === null || lng === null || accuracyMeters === null) {
-      throw createError(400, 'Invalid location data');
+    if (!req.file) {
+      throw createError(400, 'Photo is required');
     }
 
     const user = req.user;
@@ -97,6 +94,34 @@ router.post(
       if (last.type === 'OUT') {
         throw createError(400, 'Cannot punch OUT twice in a row');
       }
+    }
+
+    if (workMode === 'WFH') {
+      const attendance = await Attendance.create({
+        userId: user._id,
+        officeId: office._id,
+        workMode,
+        type,
+        serverTime: new Date(),
+        lat: null,
+        lng: null,
+        accuracyMeters: null,
+        distanceMeters: null,
+        insideGeofence: null,
+        photoPath: `/uploads/${req.file.filename}`,
+        status: 'approved',
+        reason: 'Work from home'
+      });
+
+      return res.json({ attendance });
+    }
+
+    const lat = parseNumber(req.body.lat);
+    const lng = parseNumber(req.body.lng);
+    const accuracyMeters = parseNumber(req.body.accuracyMeters);
+
+    if (lat === null || lng === null || accuracyMeters === null) {
+      throw createError(400, 'Invalid location data');
     }
 
     const distanceMeters = haversineDistance(lat, lng, office.lat, office.lng);
@@ -132,7 +157,8 @@ router.post(
       insideGeofence,
       photoPath: `/uploads/${req.file.filename}`,
       status,
-      reason: reasons.join('; ')
+      reason: reasons.join('; '),
+      workMode
     });
 
     res.json({ attendance });

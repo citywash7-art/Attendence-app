@@ -91,6 +91,7 @@ export default function WorkerHistory() {
             <tr>
               <th>Time</th>
               <th>Type</th>
+              <th>Mode</th>
               <th>Status</th>
               <th>Distance</th>
               <th>Office</th>
@@ -99,16 +100,25 @@ export default function WorkerHistory() {
           <tbody>
             {items.map((item) => (
               <tr key={item._id}>
-                <td>{new Date(item.serverTime).toLocaleString()}</td>
-                <td>{item.type}</td>
-                <td>{item.status}</td>
-                <td>{item.distanceMeters} m</td>
-                <td>{item.officeId?.name || 'N/A'}</td>
+                <td data-label="Time">
+                  {new Date(item.serverTime).toLocaleString()}
+                </td>
+                <td data-label="Type">{item.type}</td>
+                <td data-label="Mode">
+                  {item.workMode === 'WFH' ? 'WFH' : 'Office'}
+                </td>
+                <td data-label="Status">{item.status}</td>
+                <td data-label="Distance">
+                  {item.workMode === 'WFH' || item.distanceMeters == null
+                    ? 'N/A'
+                    : `${item.distanceMeters} m`}
+                </td>
+                <td data-label="Office">{item.officeId?.name || 'N/A'}</td>
               </tr>
             ))}
             {!items.length && (
               <tr>
-                <td colSpan="5" className="py-6 text-center text-slate-500">
+                <td colSpan="6" className="py-6 text-center text-slate-500">
                   No records found.
                 </td>
               </tr>

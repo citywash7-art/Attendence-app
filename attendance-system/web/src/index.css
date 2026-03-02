@@ -79,6 +79,59 @@ h4 {
     @apply border-b border-black/10 pb-2 text-slate-600;
   }
   .table td {
-    @apply py-2 border-b border-black/5;
+    @apply py-2 border-b border-black/5 align-top;
+  }
+  .segmented {
+    @apply flex items-center gap-2 rounded-full border border-black/10 bg-white/70 p-1;
+  }
+  .segmented-btn {
+    @apply flex-1 rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-black/5;
+  }
+  .segmented-btn.is-active {
+    @apply bg-teak text-white hover:bg-teal-800;
+  }
+}
+
+@media (max-width: 640px) {
+  .table thead {
+    display: none;
+  }
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+  .table tr {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 12px -12px rgba(15, 23, 42, 0.4);
+  }
+  .table td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px dashed rgba(15, 23, 42, 0.08);
+  }
+  .table td:last-child {
+    border-bottom: 0;
+  }
+  .table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #64748b;
+  }
+  .table td[colspan] {
+    display: block;
+    text-align: center;
+  }
+  .table td[colspan]::before {
+    content: none;
   }
 }

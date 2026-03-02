@@ -148,11 +148,11 @@ export default function AdminOffice() {
           <tbody>
             {offices.map((office) => (
               <tr key={office._id}>
-                <td>{office.name}</td>
-                <td>{office.lat}</td>
-                <td>{office.lng}</td>
-                <td>{office.radiusMeters} m</td>
-                <td>
+                <td data-label="Name">{office.name}</td>
+                <td data-label="Lat">{office.lat}</td>
+                <td data-label="Lng">{office.lng}</td>
+                <td data-label="Radius">{office.radiusMeters} m</td>
+                <td data-label="Actions">
                   <button
                     className="btn-ghost"
                     onClick={() => {

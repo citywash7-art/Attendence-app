@@ -55,8 +55,9 @@ export default function AdminReports() {
       employeeCode: item.userId?.employeeCode || '',
       office: item.officeId?.name || '',
       type: item.type,
+      workMode: item.workMode || 'OFFICE',
       serverTime: new Date(item.serverTime).toISOString(),
-      distanceMeters: item.distanceMeters,
+      distanceMeters: item.distanceMeters ?? '',
       status: item.status,
       reason: item.reason || '',
       photoPath: item.photoPath
@@ -198,6 +199,7 @@ export default function AdminReports() {
                 <th>User</th>
                 <th>Type</th>
                 <th>Time</th>
+                <th>Mode</th>
                 <th>Distance</th>
                 <th>Status</th>
                 <th>Photo</th>
@@ -206,17 +208,26 @@ export default function AdminReports() {
             <tbody>
               {items.map((item) => (
                 <tr key={item._id}>
-                  <td>
+                  <td data-label="User">
                     {item.userId?.name}
                     <div className="text-xs text-slate-500">
                       {item.userId?.employeeCode}
                     </div>
                   </td>
-                  <td>{item.type}</td>
-                  <td>{new Date(item.serverTime).toLocaleString()}</td>
-                  <td>{item.distanceMeters} m</td>
-                  <td>{item.status}</td>
-                  <td>
+                  <td data-label="Type">{item.type}</td>
+                  <td data-label="Time">
+                    {new Date(item.serverTime).toLocaleString()}
+                  </td>
+                  <td data-label="Mode">
+                    {item.workMode === 'WFH' ? 'WFH' : 'Office'}
+                  </td>
+                  <td data-label="Distance">
+                    {item.workMode === 'WFH' || item.distanceMeters == null
+                      ? 'N/A'
+                      : `${item.distanceMeters} m`}
+                  </td>
+                  <td data-label="Status">{item.status}</td>
+                  <td data-label="Photo">
                     <a
                       className="text-teal-700 underline"
                       href={item.photoPath}
@@ -230,7 +241,7 @@ export default function AdminReports() {
               ))}
               {!items.length && (
                 <tr>
-                  <td colSpan="6" className="py-6 text-center text-slate-500">
+                  <td colSpan="7" className="py-6 text-center text-slate-500">
                     No results.
                   </td>
                 </tr>

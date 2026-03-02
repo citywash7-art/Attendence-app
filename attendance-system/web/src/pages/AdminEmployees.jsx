@@ -306,9 +306,11 @@ export default function AdminEmployees() {
             <tbody>
               {roles.map((role) => (
                 <tr key={role._id}>
-                  <td>{role.name}</td>
-                  <td>{role.active === false ? 'Inactive' : 'Active'}</td>
-                  <td className="space-x-2">
+                  <td data-label="Role">{role.name}</td>
+                  <td data-label="Status">
+                    {role.active === false ? 'Inactive' : 'Active'}
+                  </td>
+                  <td className="space-x-2" data-label="Actions">
                     <button
                       className="btn-ghost"
                       onClick={() => {
@@ -362,13 +364,13 @@ export default function AdminEmployees() {
             <tbody>
               {users.map((user) => (
                 <tr key={user._id}>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td>{user.employeeCode}</td>
-                  <td>{user.role}</td>
-                  <td>{user.officeId?.name || 'N/A'}</td>
-                  <td>{user.active ? 'Yes' : 'No'}</td>
-                  <td>
+                  <td data-label="Name">{user.name}</td>
+                  <td data-label="Email">{user.email}</td>
+                  <td data-label="Code">{user.employeeCode}</td>
+                  <td data-label="Role">{user.role}</td>
+                  <td data-label="Office">{user.officeId?.name || 'N/A'}</td>
+                  <td data-label="Active">{user.active ? 'Yes' : 'No'}</td>
+                  <td data-label="Actions">
                     <button
                       className="btn-ghost"
                       onClick={() => {
