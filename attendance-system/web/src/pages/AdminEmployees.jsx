@@ -9,6 +9,7 @@ export default function AdminEmployees() {
   const [roles, setRoles] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editingRoleId, setEditingRoleId] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -70,6 +71,7 @@ export default function AdminEmployees() {
       active: true
     });
     setEditingId(null);
+    setShowPassword(false);
   };
 
   const resetRoleForm = () => {
@@ -84,10 +86,13 @@ export default function AdminEmployees() {
       if (editingId) {
         const payload = {
           name: form.name,
+          email: form.email,
+          employeeCode: form.employeeCode,
           role: form.role,
           officeId: form.officeId || null,
           active: form.active
         };
+        if (form.password) payload.password = form.password;
         await api.patch(`/admin/users/${editingId}`, payload);
         show('User updated', 'success');
       } else {
@@ -165,40 +170,79 @@ export default function AdminEmployees() {
               required
             />
           </div>
-          {!editingId && (
-            <>
-              <div>
-                <label className="label">Email</label>
-                <input
-                  className="input"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="label">Employee Code</label>
-                <input
-                  className="input"
-                  value={form.employeeCode}
-                  onChange={(e) =>
-                    setForm({ ...form, employeeCode: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label className="label">Password</label>
-                <input
-                  className="input"
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  required
-                />
-              </div>
-            </>
-          )}
+          <div>
+            <label className="label">Email</label>
+            <input
+              className="input"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="label">Employee Code</label>
+            <input
+              className="input"
+              value={form.employeeCode}
+              onChange={(e) => setForm({ ...form, employeeCode: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="label">Password</label>
+            <div className="relative">
+              <input
+                className="input pr-16"
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required={!editingId}
+                placeholder={editingId ? 'Leave blank to keep current' : ''}
+              />
+              <button
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-600 hover:bg-black/5"
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M4 4l16 16" />
+                  </svg>
+                ) : (
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            {editingId && (
+              <p className="mt-1 text-xs text-slate-500">
+                Leave blank to keep the existing password.
+              </p>
+            )}
+          </div>
           <div>
             <label className="label">Role</label>
             <select
@@ -375,6 +419,7 @@ export default function AdminEmployees() {
                       className="btn-ghost"
                       onClick={() => {
                         setEditingId(user._id);
+                        setShowPassword(false);
                         setForm({
                           name: user.name,
                           email: user.email,

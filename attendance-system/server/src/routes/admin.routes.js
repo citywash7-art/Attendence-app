@@ -250,6 +250,16 @@ router.patch(
 
     const update = {};
     if (req.body.name !== undefined) update.name = sanitizeString(req.body.name);
+    if (req.body.email !== undefined) {
+      const email = sanitizeString(req.body.email).toLowerCase();
+      if (!email) throw createError(400, 'Email cannot be empty');
+      update.email = email;
+    }
+    if (req.body.employeeCode !== undefined) {
+      const employeeCode = sanitizeString(req.body.employeeCode);
+      if (!employeeCode) throw createError(400, 'Employee code cannot be empty');
+      update.employeeCode = employeeCode;
+    }
     if (req.body.role !== undefined) {
       const nextRole = sanitizeString(req.body.role, 40).toLowerCase();
       if (!nextRole) throw createError(400, 'Role cannot be empty');
@@ -258,6 +268,12 @@ router.patch(
     }
     if (req.body.officeId !== undefined) update.officeId = req.body.officeId || null;
     if (req.body.active !== undefined) update.active = Boolean(req.body.active);
+    if (req.body.password !== undefined) {
+      const password = String(req.body.password || '').trim();
+      if (password) {
+        update.passwordHash = await bcrypt.hash(password, 10);
+      }
+    }
 
     const nextRole = update.role || existing.role;
     const nextOfficeId =
@@ -270,6 +286,17 @@ router.patch(
     if (update.officeId) {
       const office = await Office.findById(update.officeId);
       if (!office) throw createError(400, 'Office not found');
+    }
+
+    if (update.email || update.employeeCode) {
+      const or = [];
+      if (update.email) or.push({ email: update.email });
+      if (update.employeeCode) or.push({ employeeCode: update.employeeCode });
+      const conflict = await User.findOne({
+        _id: { $ne: existing._id },
+        $or: or
+      });
+      if (conflict) throw createError(409, 'User already exists');
     }
 
     const user = await User.findByIdAndUpdate(req.params.id, update, {

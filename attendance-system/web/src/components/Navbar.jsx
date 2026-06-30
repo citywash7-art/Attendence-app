@@ -29,7 +29,7 @@ export default function Navbar({ user, onLogout }) {
             ATTEND
           </div>
           <span className="text-sm font-semibold text-slate-700">
-            Attendance System
+            Lesat Action Attendence
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-4 md:gap-6">

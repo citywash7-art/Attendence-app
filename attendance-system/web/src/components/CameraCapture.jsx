@@ -49,6 +49,9 @@ export default function CameraCapture({ onCapture }) {
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     canvas.toBlob(
@@ -94,7 +97,12 @@ export default function CameraCapture({ onCapture }) {
 
       {!previewUrl && !fallback && (
         <div className="space-y-3">
-          <video ref={videoRef} autoPlay playsInline className="w-full rounded-lg bg-black/5" />
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-full rounded-lg bg-black/5 transform -scale-x-100"
+          />
           <div className="flex gap-2">
             <button className="btn-primary" type="button" onClick={startCamera}>
               Start

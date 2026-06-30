@@ -1,6 +1,9 @@
 ﻿const path = require('path');
 const dotenv = require('dotenv');
 
+// Keep the workspace-level .env as the main configuration used from VS Code.
+// The server-level .env supplies any values that are not defined there.
+dotenv.config({ path: path.join(__dirname, '..', '..', '..', '.env') });
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const toNumber = (value, fallback) => {
