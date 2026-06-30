@@ -1,0 +1,8 @@
+.git
+.gitignore
+.vercel
+**/.env
+**/node_modules
+**/dist
+**/src/uploads
+npm-debug.log*

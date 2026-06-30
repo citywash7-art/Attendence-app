@@ -1,0 +1,27 @@
+services:
+  - type: web
+    runtime: docker
+    name: lesat-action-attendence
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SERVE_WEB
+        value: "true"
+      - key: DEFAULT_RADIUS_METERS
+        value: "100"
+      - key: MAX_ACCURACY_METERS
+        value: "100"
+      - key: ALLOW_OUTSIDE_AS_FLAGGED
+        value: "false"
+      - key: PHOTO_STORAGE
+        value: local
+      - key: BLOB_ACCESS
+        value: private
