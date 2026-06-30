@@ -3,7 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const connectDB = require('./db');
-const { PORT, CORS_ORIGIN, SERVE_WEB } = require('./config');
+const { PORT, CORS_ORIGIN, PHOTO_STORAGE, SERVE_WEB } = require('./config');
+const { uploadDir } = require('./utils/photoStorage');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -39,11 +40,13 @@ app.use('/api', cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+if (PHOTO_STORAGE === 'local') {
+  app.use('/uploads', express.static(uploadDir));
 }
-app.use('/uploads', express.static(uploadDir));
+
+app.use('/api', (req, res, next) => {
+  connectDB().then(() => next()).catch(next);
+});
 
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
@@ -65,13 +68,20 @@ if (SERVE_WEB) {
 
 app.use(require('./middleware/error'));
 
-connectDB()
-  .then(() => {
+const start = async () => {
+  try {
+    await connectDB();
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
-  })
-  .catch((err) => {
+  } catch (err) {
     console.error('Failed to start server', err);
     process.exit(1);
-  });
+  }
+};
+
+if (require.main === module) {
+  start();
+}
+
+module.exports = app;

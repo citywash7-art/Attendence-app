@@ -43,6 +43,33 @@ export default function AdminReports() {
     load();
   }, []);
 
+  const viewPhoto = async (item) => {
+    const photoWindow = window.open('', '_blank');
+    if (photoWindow) photoWindow.opener = null;
+
+    try {
+      const response = await api.get(`/admin/attendance/${item._id}/photo`, {
+        responseType: 'blob'
+      });
+      const photoUrl = URL.createObjectURL(response.data);
+
+      if (photoWindow) {
+        photoWindow.location.href = photoUrl;
+      } else {
+        const link = document.createElement('a');
+        link.href = photoUrl;
+        link.target = '_blank';
+        link.rel = 'noreferrer';
+        link.click();
+      }
+
+      window.setTimeout(() => URL.revokeObjectURL(photoUrl), 60_000);
+    } catch (err) {
+      if (photoWindow) photoWindow.close();
+      show(err.response?.data?.message || 'Failed to load photo', 'error');
+    }
+  };
+
   const exportCsv = () => {
     if (!items.length) {
       show('No data to export', 'error');
@@ -228,14 +255,13 @@ export default function AdminReports() {
                   </td>
                   <td data-label="Status">{item.status}</td>
                   <td data-label="Photo">
-                    <a
+                    <button
                       className="text-teal-700 underline"
-                      href={item.photoPath}
-                      target="_blank"
-                      rel="noreferrer"
+                      type="button"
+                      onClick={() => viewPhoto(item)}
                     >
                       View
-                    </a>
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -3,6 +3,7 @@ const { MONGODB_URI } = require('./config');
 mongoose.set('autoCreate', false);
 
 const requiredCollections = ['attendances', 'offices', 'roles', 'users'];
+let connectionPromise;
 
 const ensureCollections = async (connection) => {
   const existingCollections = await connection.db
@@ -17,17 +18,31 @@ const ensureCollections = async (connection) => {
   }
 };
 
-const connectDB = async () => {
+const connectDB = () => {
   if (!MONGODB_URI) {
-    throw new Error('MONGODB_URI not set');
+    return Promise.reject(new Error('MONGODB_URI not set'));
   }
-  await mongoose.connect(MONGODB_URI, { autoCreate: false });
 
-  // Materialize every required collection on first startup.
-  await ensureCollections(mongoose.connection);
+  if (mongoose.connection.readyState === 1) {
+    return Promise.resolve(mongoose.connection);
+  }
 
-  console.log(`MongoDB connected: ${mongoose.connection.name}`);
-  return mongoose.connection;
+  if (!connectionPromise) {
+    connectionPromise = mongoose
+      .connect(MONGODB_URI, { autoCreate: false })
+      .then(async () => {
+        // Materialize every required collection on first startup.
+        await ensureCollections(mongoose.connection);
+        console.log(`MongoDB connected: ${mongoose.connection.name}`);
+        return mongoose.connection;
+      })
+      .catch((err) => {
+        connectionPromise = null;
+        throw err;
+      });
+  }
+
+  return connectionPromise;
 };
 
 module.exports = connectDB;

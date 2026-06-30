@@ -1,3 +1,5 @@
 **/node_modules/
 .env
 attendance-system/server/src/uploads/
+attendance-system/web/dist/
+.vercel/

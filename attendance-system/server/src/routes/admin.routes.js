@@ -1,11 +1,14 @@
 ﻿const express = require('express');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const { Readable } = require('stream');
 const User = require('../models/User');
 const Office = require('../models/Office');
 const Attendance = require('../models/Attendance');
 const Role = require('../models/Role');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
+const { getBlobPhoto, getLocalPhotoPath } = require('../utils/photoStorage');
 
 const router = express.Router();
 
@@ -344,6 +347,62 @@ router.get(
       .populate('officeId', 'name');
 
     res.json({ items });
+  })
+);
+
+router.get(
+  '/attendance/:id/photo',
+  asyncHandler(async (req, res) => {
+    const attendance = await Attendance.findById(req.params.id).select('photoPath');
+    if (!attendance?.photoPath) {
+      throw createError(404, 'Photo not found');
+    }
+
+    const localPhotoPath = getLocalPhotoPath(attendance.photoPath);
+    if (localPhotoPath) {
+      try {
+        await fs.promises.access(localPhotoPath, fs.constants.R_OK);
+      } catch {
+        throw createError(404, 'Photo not found');
+      }
+
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.sendFile(localPhotoPath);
+    }
+
+    let result;
+    try {
+      result = await getBlobPhoto(
+        attendance.photoPath,
+        req.headers['if-none-match']
+      );
+    } catch (err) {
+      if (err.name === 'BlobNotFoundError') {
+        throw createError(404, 'Photo not found');
+      }
+      throw err;
+    }
+
+    if (!result) {
+      throw createError(404, 'Photo not found');
+    }
+
+    if (result.statusCode === 304) {
+      res.setHeader('ETag', result.blob.etag);
+      res.setHeader('Cache-Control', 'private, no-store');
+      return res.status(304).end();
+    }
+
+    if (result.statusCode !== 200 || !result.stream) {
+      throw createError(404, 'Photo not found');
+    }
+
+    res.setHeader('Content-Type', result.blob.contentType || 'application/octet-stream');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('ETag', result.blob.etag);
+    Readable.fromWeb(result.stream).pipe(res);
   })
 );
 

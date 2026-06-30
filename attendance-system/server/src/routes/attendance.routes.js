@@ -1,24 +1,13 @@
 ﻿const express = require('express');
-const path = require('path');
 const multer = require('multer');
 const Attendance = require('../models/Attendance');
 const Office = require('../models/Office');
 const auth = require('../middleware/auth');
 const { MAX_ACCURACY_METERS, ALLOW_OUTSIDE_AS_FLAGGED } = require('../config');
 const { haversineDistance } = require('../utils/distance');
+const { deletePhoto, savePhoto } = require('../utils/photoStorage');
 
 const router = express.Router();
-
-const uploadDir = path.join(__dirname, '..', 'uploads');
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
-    const name = `punch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-    cb(null, name);
-  }
-});
 
 const fileFilter = (req, file, cb) => {
   if (!file.mimetype.startsWith('image/')) {
@@ -30,9 +19,10 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }
+  // Vercel Functions accept request bodies up to 4.5 MB.
+  limits: { fileSize: 4 * 1024 * 1024 }
 });
 
 const asyncHandler = (fn) => (req, res, next) =>
@@ -96,8 +86,10 @@ router.post(
       }
     }
 
+    let attendanceData;
+
     if (workMode === 'WFH') {
-      const attendance = await Attendance.create({
+      attendanceData = {
         userId: user._id,
         officeId: office._id,
         workMode,
@@ -108,60 +100,68 @@ router.post(
         accuracyMeters: null,
         distanceMeters: null,
         insideGeofence: null,
-        photoPath: `/uploads/${req.file.filename}`,
         status: 'approved',
         reason: 'Work from home'
-      });
+      };
+    } else {
+      const lat = parseNumber(req.body.lat);
+      const lng = parseNumber(req.body.lng);
+      const accuracyMeters = parseNumber(req.body.accuracyMeters);
 
-      return res.json({ attendance });
-    }
-
-    const lat = parseNumber(req.body.lat);
-    const lng = parseNumber(req.body.lng);
-    const accuracyMeters = parseNumber(req.body.accuracyMeters);
-
-    if (lat === null || lng === null || accuracyMeters === null) {
-      throw createError(400, 'Invalid location data');
-    }
-
-    const distanceMeters = haversineDistance(lat, lng, office.lat, office.lng);
-    const insideGeofence = distanceMeters <= office.radiusMeters;
-
-    let status = 'approved';
-    const reasons = [];
-
-    if (!insideGeofence) {
-      if (!ALLOW_OUTSIDE_AS_FLAGGED) {
-        status = 'rejected';
-        reasons.push('Outside geofence');
-      } else {
-        status = 'flagged';
-        reasons.push('Outside geofence');
+      if (lat === null || lng === null || accuracyMeters === null) {
+        throw createError(400, 'Invalid location data');
       }
+
+      const distanceMeters = haversineDistance(lat, lng, office.lat, office.lng);
+      const insideGeofence = distanceMeters <= office.radiusMeters;
+
+      let status = 'approved';
+      const reasons = [];
+
+      if (!insideGeofence) {
+        if (!ALLOW_OUTSIDE_AS_FLAGGED) {
+          status = 'rejected';
+          reasons.push('Outside geofence');
+        } else {
+          status = 'flagged';
+          reasons.push('Outside geofence');
+        }
+      }
+
+      if (status !== 'rejected' && accuracyMeters > MAX_ACCURACY_METERS) {
+        status = 'flagged';
+        reasons.push('Low GPS accuracy');
+      }
+
+      attendanceData = {
+        userId: user._id,
+        officeId: office._id,
+        type,
+        serverTime: new Date(),
+        lat,
+        lng,
+        accuracyMeters,
+        distanceMeters,
+        insideGeofence,
+        status,
+        reason: reasons.join('; '),
+        workMode
+      };
     }
 
-    if (status !== 'rejected' && accuracyMeters > MAX_ACCURACY_METERS) {
-      status = 'flagged';
-      reasons.push('Low GPS accuracy');
+    let photoPath;
+    try {
+      photoPath = await savePhoto(req.file, user._id.toString());
+      const attendance = await Attendance.create({ ...attendanceData, photoPath });
+      return res.json({ attendance });
+    } catch (err) {
+      if (photoPath) {
+        await deletePhoto(photoPath).catch((cleanupError) => {
+          console.error('Failed to clean up photo', cleanupError);
+        });
+      }
+      throw err;
     }
-
-    const attendance = await Attendance.create({
-      userId: user._id,
-      officeId: office._id,
-      type,
-      serverTime: new Date(),
-      lat,
-      lng,
-      accuracyMeters,
-      distanceMeters,
-      insideGeofence,
-      photoPath: `/uploads/${req.file.filename}`,
-      status,
-      reason: reasons.join('; '),
-      workMode
-    });
-
-    res.json({ attendance });
   })
 );
 
