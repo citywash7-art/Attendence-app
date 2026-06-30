@@ -22,6 +22,12 @@ services:
       - key: ALLOW_OUTSIDE_AS_FLAGGED
         value: "false"
       - key: PHOTO_STORAGE
-        value: local
+        value: cloudinary
       - key: BLOB_ACCESS
         value: private
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false

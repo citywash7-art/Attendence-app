@@ -31,5 +31,8 @@ module.exports = {
   ALLOW_OUTSIDE_AS_FLAGGED: toBool(process.env.ALLOW_OUTSIDE_AS_FLAGGED, false),
   SERVE_WEB: toBool(process.env.SERVE_WEB, false),
   PHOTO_STORAGE: photoStorage,
-  BLOB_ACCESS: blobAccess
+  BLOB_ACCESS: blobAccess,
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || ''
 };

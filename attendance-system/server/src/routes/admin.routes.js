@@ -8,7 +8,11 @@ const Attendance = require('../models/Attendance');
 const Role = require('../models/Role');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
-const { getBlobPhoto, getLocalPhotoPath } = require('../utils/photoStorage');
+const {
+  getBlobPhoto,
+  getCloudinaryPhoto,
+  getLocalPhotoPath
+} = require('../utils/photoStorage');
 
 const router = express.Router();
 
@@ -369,6 +373,22 @@ router.get(
       res.setHeader('Cache-Control', 'private, no-store');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       return res.sendFile(localPhotoPath);
+    }
+
+    const cloudinaryResponse = await getCloudinaryPhoto(attendance.photoPath);
+    if (cloudinaryResponse) {
+      if (!cloudinaryResponse.ok || !cloudinaryResponse.body) {
+        throw createError(404, 'Photo not found');
+      }
+
+      res.setHeader(
+        'Content-Type',
+        cloudinaryResponse.headers.get('content-type') || 'application/octet-stream'
+      );
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'private, no-store');
+      Readable.fromWeb(cloudinaryResponse.body).pipe(res);
+      return;
     }
 
     let result;
